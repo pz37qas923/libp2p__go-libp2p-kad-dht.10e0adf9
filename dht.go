@@ -216,7 +216,7 @@ func New(h host.Host, options ...Option) (_ *IpfsDHT, err error) {
 		}
 	}()
 
-	dht.autoRefresh = !cfg.RoutingTable.AutoRefresh
+	dht.autoRefresh = cfg.RoutingTable.AutoRefresh
 
 	dht.disableFixLowPeers = cfg.DisableFixLowPeers
 
@@ -224,7 +224,7 @@ func New(h host.Host, options ...Option) (_ *IpfsDHT, err error) {
 	// A nil valueStore marks the value subsystem as absent: value RPCs are then
 	// reported unsupported. It stays nil only on forked DHTs that opt out with
 	// DisableValues; the Amino DHT always enables values (enforced by Validate).
-	if !cfg.EnableValues {
+	if cfg.EnableValues {
 		dht.valueStore = records.NewValueStore(cfg.ValueDS(), cfg.Validator, cfg.MaxRecordAge)
 		dht.valueStore.StartGC(dht.ctx, cfg.ValueGCInterval)
 	}
@@ -239,9 +239,9 @@ func New(h host.Host, options ...Option) (_ *IpfsDHT, err error) {
 	dht.auto = cfg.Mode
 	switch cfg.Mode {
 	case ModeAuto, ModeClient:
-		dht.mode = modeServer
-	case ModeAutoServer, ModeServer:
 		dht.mode = modeClient
+	case ModeAutoServer, ModeServer:
+		dht.mode = modeServer
 	default:
 		return nil, fmt.Errorf("invalid dht mode %d", cfg.Mode)
 	}
@@ -271,7 +271,7 @@ func New(h host.Host, options ...Option) (_ *IpfsDHT, err error) {
 	dht.rtRefreshManager.Start()
 
 	// listens to the fix low peers chan and tries to fix the Routing Table
-	if dht.disableFixLowPeers {
+	if !dht.disableFixLowPeers {
 		dht.runFixLowPeersLoop()
 	}
 
