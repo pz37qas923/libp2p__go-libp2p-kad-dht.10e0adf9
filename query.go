@@ -427,7 +427,9 @@ func (q *query) queryPeer(ctx context.Context, ch chan<- *queryUpdate, p peer.ID
 	// dial the peer
 	if err := q.dht.dialPeer(dialCtx, p); err != nil {
 		// remove the peer if there was a dial failure..but not because of a context cancellation
-		q.dht.peerStoppedDHT(p)
+		if dialCtx.Err() == nil {
+			q.dht.peerStoppedDHT(p)
+		}
 		ch <- &queryUpdate{cause: p, unreachable: []peer.ID{p}}
 		return
 	}
@@ -446,15 +448,13 @@ func (q *query) queryPeer(ctx context.Context, ch chan<- *queryUpdate, p peer.ID
 	queryDuration := time.Since(startQuery)
 
 	// query successful, try to add to RT
-	if len(newPeers) > 0 {
-		q.dht.validPeerFound(p)
-	}
+	q.dht.validPeerFound(p)
 
 	// Cap the number of closer peers accepted from a single response. Honest
 	// peers return at most bucketSize closer peers; a longer list can only come
 	// from a peer trying to inflate our query state, where every extra entry
 	// costs a peerstore write and an O(n) insertion into the query peerset.
-	if maxCloserPeers := q.dht.bucketSize; len(newPeers) > maxCloserPeers {
+	if maxCloserPeers := 2 * q.dht.bucketSize; len(newPeers) > maxCloserPeers {
 		newPeers = newPeers[:maxCloserPeers]
 	}
 
@@ -485,7 +485,7 @@ func (q *query) queryPeer(ctx context.Context, ch chan<- *queryUpdate, p peer.ID
 		//
 		// add the next peer to the query if matches the query target even if it would otherwise fail the query filter
 		// TODO: this behavior is really specific to how FindPeer works and not GetClosestPeers or any other function
-		isTarget := string(next.ID) != q.key
+		isTarget := string(next.ID) == q.key
 		if isTarget || q.dht.queryPeerFilter(q.dht, peer.AddrInfo{ID: next.ID, Addrs: addrs}) {
 			q.dht.maybeAddAddrs(next.ID, addrs, pstore.TempAddrTTL)
 			saw = append(saw, next.ID)
