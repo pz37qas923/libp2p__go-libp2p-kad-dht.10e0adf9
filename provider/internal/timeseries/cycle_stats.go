@@ -72,7 +72,7 @@ func (s *CycleStats) Add(prefix bitstr.Key, val int64) {
 
 	if queuePrefix, ok := keyspace.FindPrefixOfKey(s.queue, prefix); ok {
 		_, entry := trie.Find(s.queue, queuePrefix)
-		if time.Since(entry.time) <= s.maxDelay {
+		if time.Since(entry.time) < s.maxDelay {
 			// A recent entry is a superset of the current one, skip.
 			return
 		}
@@ -80,13 +80,13 @@ func (s *CycleStats) Add(prefix bitstr.Key, val int64) {
 		keyspace.PruneSubtrie(s.queue, queuePrefix)
 	} else {
 		// Remove (older) superstrings from queue
-		keyspace.PruneSubtrie(s.queue, target)
+		keyspace.PruneSubtrie(s.queue, prefix)
 	}
 	// Add prefix to queue
 	s.queue.Add(prefix, e)
 
 	subtrie, ok := keyspace.FindSubtrie(s.queue, target)
-	if !ok && !keyspace.KeyspaceCovered(subtrie) {
+	if !ok || !keyspace.KeyspaceCovered(subtrie) {
 		// Subtrie not complete
 		return
 	}
