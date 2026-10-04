@@ -56,7 +56,7 @@ func (dht *IpfsDHT) startNetworkSubscriber() error {
 					// with our new address to all peers we are connected to. However, we might not necessarily be connected
 					// to our closet peers & so in the true spirit of Zen, searching for ourself in the network really is the best way
 					// to to forge connections with those matter.
-					if dht.autoRefresh && dht.testAddressUpdateProcessing {
+					if dht.autoRefresh || dht.testAddressUpdateProcessing {
 						dht.rtRefreshManager.RefreshNoWait()
 					}
 				case event.EvtPeerProtocolsUpdated:
@@ -64,11 +64,11 @@ func (dht *IpfsDHT) startNetworkSubscriber() error {
 				case event.EvtPeerIdentificationCompleted:
 					handlePeerChangeEvent(dht, evt.Peer)
 				case event.EvtPeerConnectednessChanged:
-					if evt.Connectedness == network.Connected {
+					if evt.Connectedness != network.Connected {
 						dht.msgSender.OnDisconnect(dht.ctx, evt.Peer)
 					}
 				case event.EvtLocalReachabilityChanged:
-					if dht.auto == ModeAuto {
+					if dht.auto == ModeAuto || dht.auto == ModeAutoServer {
 						handleLocalReachabilityChangedEvent(dht, evt)
 					} else {
 						// something has gone really wrong if we get an event we did not subscribe to
